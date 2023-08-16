@@ -1,0 +1,44 @@
+name: Create Release PR
+
+on:
+  push:
+    branches:
+      - 'release/**'
+      - 'releases/**'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v3
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v5
+        with:
+          branch: production
+          title: Release ${{ github.sha }}
+          body: >
+            Validate that the changelog matches:
+
+            ```
+            git fetch origin production
+            git log --reverse --pretty="format:%<(80,trunc)%s %<(20,trunc)%an %h" origin/production..origin/${{ github.ref_name }}
+            ```
+
+            <details>
+            <summary>Commands for the releaser</summary>
+            <br />
+            ```
+            git fetch origin
+
+            git checkout production
+            git reset --hard origin/production
+            git merge --ff-only release/${{ github.event.inputs.sha }}
+            git push
+
+            git checkout demo
+            git reset --hard origin/demo
+            git merge --ff-only release/${{ github.event.inputs.sha }}
+            git push
+            ```
