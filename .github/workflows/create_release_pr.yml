@@ -1,29 +1,43 @@
 name: Create Release PR
 
 on:
-  push:
-    branches:
-      - 'release/**'
-      - 'releases/**'
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: "SHA to release"
+        required: true
+        type: string
 
 jobs:
   create-release:
     runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      RELEASE_BRANCH: release/${{ github.event.inputs.sha }}
+
     steps:
       - name: Setup repo
         uses: actions/checkout@v3
+      - name: Create branch
+        run: |
+          git branch release/${{ github.event.inputs.sha }} ${{ github.event.inputs.sha }}
+          git switch release/${{ github.event.inputs.sha }}
+          git pull --rebase origin main
+          git push -u origin HEAD
+          git log
 
       - name: Create pull request
         uses: peter-evans/create-pull-request@v5
         with:
-          branch: production
-          title: Release ${{ github.sha }}
+          base: production
+          branch: release/${{ github.event.inputs.sha }}
+          title: Release ${{ github.event.inputs.sha }}
           body: >
             Validate that the changelog matches:
 
             ```
             git fetch origin production
-            git log --reverse --pretty="format:%<(80,trunc)%s %<(20,trunc)%an %h" origin/production..origin/${{ github.ref_name }}
+            git log --reverse --pretty="format:%<(80,trunc)%s %<(20,trunc)%an %h" origin/production..origin/release/${{ github.event.inputs.sha }}
             ```
 
             <details>
